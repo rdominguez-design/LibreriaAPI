@@ -1,0 +1,49 @@
+﻿
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using LibreriaAPI.Data;
+using LibreriaAPI.Models;
+
+namespace LibreriaAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ProductosController : ControllerBase
+    {
+        private readonly LibreriaContext _context;
+
+        public ProductosController(LibreriaContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/Productos (Lista todos los productos)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Producto>>> GetProductos()
+        {
+            // Usamos Include() para traer también los datos de la Categoría.
+            // Esto es VITAL para que la app pueda calcular el PrecioVenta usando el margen heredado.
+            return await _context.Productos.Include(p => p.Categoria).ToListAsync();
+        }
+
+        // POST: api/Productos (Guarda un producto nuevo)
+        [HttpPost]
+        public async Task<ActionResult<Producto>> PostProducto(Producto producto)
+        {
+            // Verificamos que la categoría que eligió el usuario realmente exista
+            var categoriaExiste = await _context.Categorias.FindAsync(producto.CategoriaId);
+            if (categoriaExiste == null)
+            {
+                return BadRequest("La categoría ingresada no existe.");
+            }
+
+            _context.Productos.Add(producto);
+            await _context.SaveChangesAsync();
+
+            // Recargamos el producto con su categoría unida para mostrar el precio final en la respuesta
+            await _context.Entry(producto).Reference(p => p.Categoria).LoadAsync();
+
+            return Ok(producto);
+        }
+    }
+}
