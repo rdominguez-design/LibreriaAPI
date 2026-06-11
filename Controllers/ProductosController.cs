@@ -45,5 +45,36 @@ namespace LibreriaAPI.Controllers
 
             return Ok(producto);
         }
+        // POST: api/Productos/1/vender?cantidad=2
+        [HttpPost("{id}/vender")]
+        public async Task<IActionResult> RegistrarVenta(int id, int cantidad)
+        {
+            // 1. Buscamos el producto en el "depósito" (Base de datos)
+            var producto = await _context.Productos.FindAsync(id);
+
+            if (producto == null)
+            {
+                return NotFound("El producto ingresado no existe.");
+            }
+
+            // 2. Verificamos que haya suficiente stock
+            if (producto.StockActual < cantidad)
+            {
+                return BadRequest($"Stock insuficiente. Solo te quedan {producto.StockActual} unidades de {producto.Nombre}.");
+            }
+
+            // 3. Descontamos el stock matemático
+            producto.StockActual -= cantidad;
+
+            // 4. Guardamos los cambios físicos en el archivo
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Mensaje = "Venta registrada con éxito.",
+                Producto = producto.Nombre,
+                StockRestante = producto.StockActual
+            });
+        }
     }
 }
