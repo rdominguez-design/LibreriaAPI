@@ -133,5 +133,28 @@ namespace LibreriaAPI.Controllers
             // 4. Devolvemos la lista de coincidencias
             return Ok(productos);
         }
+        // DELETE: api/Productos/1
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> EliminarProducto(int id)
+        {
+            // 1. Buscamos si el producto realmente existe
+            var producto = await _context.Productos.FindAsync(id);
+
+            if (producto == null)
+            {
+                return NotFound($"No se encontró ningún producto con el ID {id}.");
+            }
+
+            // 2. Le damos la orden a la base de datos para que lo elimine
+            _context.Productos.Remove(producto);
+
+            // 3. Confirmamos y guardamos los cambios físicos
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Mensaje = $"El producto '{producto.Nombre}' fue eliminado para siempre del sistema."
+            });
+        }
     }
 }
