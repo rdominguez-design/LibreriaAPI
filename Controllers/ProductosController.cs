@@ -81,5 +81,33 @@ namespace LibreriaAPI.Controllers
                 StockRestante = producto.StockActual
             });
         }
+        // PUT: api/Productos/AumentoMasivo?categoriaId=1&porcentaje=15
+        [HttpPut("AumentoMasivo")]
+        public async Task<IActionResult> AumentoMasivo(int categoriaId, decimal porcentaje)
+        {
+            // 1. Buscamos todos los productos que pertenezcan a esa categoría
+            var productos = await _context.Productos.Where(p => p.CategoriaId == categoriaId).ToListAsync();
+
+            if (!productos.Any())
+            {
+                return NotFound("No se encontraron productos para esta categoría.");
+            }
+
+            // 2. Recorremos uno por uno y les aplicamos el aumento matemático
+            foreach (var producto in productos)
+            {
+                decimal factorAumento = 1 + (porcentaje / 100);
+                producto.CostoProveedor = Math.Round(producto.CostoProveedor * factorAumento, 2);
+            }
+
+            // 3. Guardamos todos los cambios juntos en la base de datos
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Mensaje = $"Éxito. Se actualizó el costo de {productos.Count} productos.",
+                AumentoAplicado = $"{porcentaje}%"
+            });
+        }
     }
 }
