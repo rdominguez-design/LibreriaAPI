@@ -56,6 +56,11 @@ namespace LibreriaAPI.Controllers
             {
                 return NotFound("El producto ingresado no existe.");
             }
+            // 1.5 VALIDACIÓN DE SEGURIDAD: Evitar números negativos o cero
+            if (cantidad <= 0)
+            {
+                return BadRequest("La cantidad a vender debe ser mayor a cero. ¡No se aceptan ventas fantasmas ni devoluciones truchas!");
+            }
 
             // 2. Verificamos que haya suficiente stock
             if (producto.StockActual < cantidad)
