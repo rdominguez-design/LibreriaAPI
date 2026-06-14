@@ -109,5 +109,29 @@ namespace LibreriaAPI.Controllers
                 AumentoAplicado = $"{porcentaje}%"
             });
         }
+        // GET: api/Productos/Buscar?nombre=cuaderno
+        [HttpGet("Buscar")]
+        public async Task<IActionResult> BuscarPorNombre(string nombre)
+        {
+            // 1. Validamos que el usuario no haya mandado un texto vacío
+            if (string.IsNullOrWhiteSpace(nombre))
+            {
+                return BadRequest("Por favor, ingresá una palabra para buscar.");
+            }
+
+            // 2. Buscamos cualquier producto que CONTENGA la palabra ingresada
+            var productos = await _context.Productos
+                                          .Where(p => p.Nombre.ToLower().Contains(nombre.ToLower()))
+                                          .ToListAsync();
+
+            // 3. Verificamos si hubo suerte
+            if (!productos.Any())
+            {
+                return NotFound($"No encontramos ningún producto que contenga la palabra '{nombre}'.");
+            }
+
+            // 4. Devolvemos la lista de coincidencias
+            return Ok(productos);
+        }
     }
 }
