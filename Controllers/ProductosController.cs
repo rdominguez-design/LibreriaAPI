@@ -56,6 +56,7 @@ namespace LibreriaAPI.Controllers
             {
                 return NotFound("El producto ingresado no existe.");
             }
+
             // 1.5 VALIDACIÓN DE SEGURIDAD: Evitar números negativos o cero
             if (cantidad <= 0)
             {
@@ -71,13 +72,31 @@ namespace LibreriaAPI.Controllers
             // 3. Descontamos el stock matemático
             producto.StockActual -= cantidad;
 
+            // --- NUEVO PASO 3.5: Generamos el "ticket" de la venta para el historial ---
+            var nuevaVenta = new Venta
+            {
+                Fecha = DateTime.Now, // Toma la fecha y hora exacta de la computadora
+                ProductoId = producto.Id,
+                ProductoNombre = producto.Nombre,
+                Cantidad = cantidad,
+                Total = producto.PrecioVenta * cantidad // Multiplica el precio unitario por la cantidad vendida
+            };
+
+            // Agregamos la venta a la tabla
+            _context.Ventas.Add(nuevaVenta);
+            // ----------------------------------------------------------------------------
+
             // 4. Guardamos los cambios físicos en el archivo
+            // La magia de esto es que guarda el descuento de stock Y el ticket al mismo tiempo.
             await _context.SaveChangesAsync();
 
+            // Actualizamos el mensaje de respuesta para que muestre el total cobrado
             return Ok(new
             {
-                Mensaje = "Venta registrada con éxito.",
+                Mensaje = "Venta registrada y facturada con éxito.",
                 Producto = producto.Nombre,
+                CantidadVendida = cantidad,
+                TotalCobrado = nuevaVenta.Total,
                 StockRestante = producto.StockActual
             });
         }
@@ -154,6 +173,46 @@ namespace LibreriaAPI.Controllers
             return Ok(new
             {
                 Mensaje = $"El producto '{producto.Nombre}' fue eliminado para siempre del sistema."
+            });
+        }
+        // GET: api/Productos/Paginados?pagina=1&cantidadPorPagina=20
+        [HttpGet("Paginados")]
+        public async Task<IActionResult> ObtenerProductosPaginados(int pagina = 1, int cantidadPorPagina = 20)
+        {
+            // Con "Skip" saltamos los productos de las páginas anteriores
+            // Con "Take" agarramos solo la cantidad que necesitamos ahora para no saturar la pantalla
+            var productos = await _context.Productos
+                                          .Skip((pagina - 1) * cantidadPorPagina)
+                                          .Take(cantidadPorPagina)
+                                          .ToListAsync();
+
+            return Ok(productos);
+        }
+
+        // GET: api/Productos/ReporteMensual?mes=6&anio=2026
+        [HttpGet("ReporteMensual")]
+        public async Task<IActionResult> ReporteMensual(int mes, int anio)
+        {
+            // 1. Buscamos todas las ventas que correspondan a ese mes y año
+            var ventasDelMes = await _context.Ventas
+                                             .Where(v => v.Fecha.Month == mes && v.Fecha.Year == anio)
+                                             .ToListAsync();
+
+            if (!ventasDelMes.Any())
+            {
+                return Ok($"No se registraron ventas en la fecha {mes}/{anio}.");
+            }
+
+            // 2. Sumamos los totales de forma veloz en el disco
+            decimal totalFacturado = ventasDelMes.Sum(v => v.Total);
+            int articulosVendidos = ventasDelMes.Sum(v => v.Cantidad);
+
+            return Ok(new
+            {
+                Periodo = $"{mes}/{anio}",
+                TotalFacturado = totalFacturado,
+                ArticulosVendidos = articulosVendidos,
+                TicketsEmitidos = ventasDelMes.Count
             });
         }
     }

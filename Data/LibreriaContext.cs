@@ -12,6 +12,7 @@ namespace LibreriaAPI.Data
 
         // Estas van a ser nuestras tablas físicas en la base de datos
         public DbSet<Producto> Productos { get; set; }
+        public DbSet<Venta> Ventas { get; set; }
         public DbSet<Categoria> Categorias { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
