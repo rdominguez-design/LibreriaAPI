@@ -31,5 +31,6 @@
                 return CostoProveedor * (1 + (margenAplicado / 100));
             }
         }
+         public bool Activo { get; set; } = true;
     }
 }
